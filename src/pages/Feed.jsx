@@ -47,14 +47,17 @@ export default function Feed() {
 
   return (
     <div className="w-full min-h-screen px-2 md:px-6 py-4 flex justify-center">
+      {/* Full 1400px feed width */}
       <div className="w-full max-w-[1400px] flex flex-col gap-6">
+
         {loading ? (
           <p className="text-center text-gray-500">Loading post...</p>
         ) : posts.length === 0 ? (
           <p className="text-center text-gray-500">No posts found.</p>
         ) : (
           posts.map((post) => (
-            <div key={post._id} className="w-full md:w-[90%] lg:w-[80%] mx-auto">
+            // Removed width restrictions to allow full 1400px usage
+            <div key={post._id} className="w-full">
               <PostCard
                 post={post}
                 setPosts={setPosts}
@@ -63,6 +66,7 @@ export default function Feed() {
             </div>
           ))
         )}
+
       </div>
     </div>
   );

@@ -4,16 +4,16 @@ import UserContext from "../context/UserContext";
 import PostCard from "../components/PostCard";
 import UserListModal from "../components/UserListModal";
 import api from "../api/axios";
-import searchIcon from "../assets/search-icon.png"; // imported
+import searchIcon from "../assets/search-icon.png";
+import defaultAvatar from "../assets/profile-pic-avatar.jpg";
 
-// Backend URL from environment
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
-const DEFAULT_PROFILE = "/profile-pic-avatar.jpg";
+const DEFAULT_PROFILE = defaultAvatar;
 
-const fixURL = (path, fallback = "") => {
+const fixURL = (path, fallback = DEFAULT_PROFILE) => {
   if (!path) return fallback;
   if (path.startsWith("http")) return path;
-  return `${API_URL}/${path}`;
+  return `${API_URL}/${path.startsWith("/") ? path.slice(1) : path}`;
 };
 
 export default function Home() {
@@ -24,14 +24,12 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
-
   const [modalData, setModalData] = useState({ type: "", users: [] });
   const [showModal, setShowModal] = useState(false);
 
   const searchRef = useRef(null);
   const searchContainerRef = useRef(null);
 
-  // Fetch feed posts
   useEffect(() => {
     if (!currentUser?._id) return;
 
@@ -40,7 +38,7 @@ export default function Home() {
         const res = await api.get("/posts/feed");
         const cleanedFeed = (res.data.feed || []).map((post) => ({
           ...post,
-          image: post.image ? fixURL(post.image) : null, // only set if exists
+          image: post.image ? fixURL(post.image) : null,
           author: {
             ...post.author,
             profilePic: fixURL(post.author?.profilePic, DEFAULT_PROFILE),
@@ -56,7 +54,6 @@ export default function Home() {
     fetchFeed();
   }, [currentUser]);
 
-  // Hide search dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (
@@ -70,7 +67,6 @@ export default function Home() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Search users
   useEffect(() => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
@@ -85,10 +81,12 @@ export default function Home() {
         const res = await api.get(`/users/search?q=${searchQuery}`, {
           signal: controller.signal,
         });
-        const cleaned = res.data.users.map((u) => ({
+
+        const cleaned = (res.data.users || []).map((u) => ({
           ...u,
           profilePic: fixURL(u.profilePic, DEFAULT_PROFILE),
         }));
+
         setSearchResults(cleaned);
       } catch (err) {
         if (err.name !== "CanceledError") {
@@ -111,7 +109,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-100 px-3 sm:px-4 md:px-6 py-4 flex justify-center">
-      <div className="w-full max-w-[1400px]">
+      {/* Container now full width for posts */}
+      <div className="w-full">
         {/* Search Bar */}
         <div
           ref={searchContainerRef}
@@ -131,7 +130,6 @@ export default function Home() {
             className="w-full p-3 pl-11 border rounded-lg shadow-sm focus:outline-none focus:ring focus:border-blue-300 text-sm sm:text-base"
           />
 
-          {/* Dropdown */}
           {searchQuery.trim() && searchResults.length > 0 && (
             <ul className="absolute z-50 w-full bg-white border rounded-lg shadow top-full mt-1 max-h-60 overflow-y-auto">
               {searchResults.map((user) => (
@@ -158,20 +156,18 @@ export default function Home() {
           )}
         </div>
 
-        {/* Feed Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {/* Feed (full width posts) */}
+        <div className="flex flex-col gap-6">
           {feed.map((post) => (
-            <div key={post._id} className="w-full">
-              <PostCard
-                post={post}
-                setPosts={setFeed}
-                refreshPosts={null}
-              />
-            </div>
+            <PostCard
+              key={post._id}
+              post={post}
+              setPosts={setFeed}
+              refreshPosts={null}
+            />
           ))}
         </div>
 
-        {/* Modal */}
         {showModal && (
           <UserListModal
             type={modalData.type}

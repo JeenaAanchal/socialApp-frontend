@@ -22,7 +22,6 @@ export default function PostCard({ post, setPosts, refreshPosts }) {
 
   const isOwner = post.author._id === currentUser._id;
 
-  // Use latest currentUser pic for own posts
   const profilePicURL = isOwner
     ? currentUser.profilePic || defaultProfile
     : post.author.profilePic
@@ -39,7 +38,6 @@ export default function PostCard({ post, setPosts, refreshPosts }) {
   const [comments, setComments] = useState(post.comments || []);
   const [newComment, setNewComment] = useState("");
 
-  // Like/unlike post
   const handleLike = async () => {
     const newLiked = !liked;
     setLiked(newLiked);
@@ -52,7 +50,6 @@ export default function PostCard({ post, setPosts, refreshPosts }) {
     }
   };
 
-  // Add comment
   const handleAddComment = async () => {
     if (!newComment.trim()) return;
     try {
@@ -63,29 +60,28 @@ export default function PostCard({ post, setPosts, refreshPosts }) {
       setPosts((prev) =>
         prev.map((p) => (p._id === post._id ? { ...p, comments: updated } : p))
       );
-    } catch {}
+    } catch { }
   };
 
-  // Delete comment
   const handleDeleteComment = async (commentId) => {
     try {
       await api.delete(`/posts/${post._id}/comment/${commentId}`);
       setComments((prev) => prev.filter((c) => c._id !== commentId));
-    } catch {}
+    } catch { }
   };
 
-  // Delete post
   const handleDeletePost = async () => {
     if (!window.confirm("Delete this post?")) return;
     try {
       await api.delete(`/posts/${post._id}`);
       setPosts((prev) => prev.filter((p) => p._id !== post._id));
       refreshPosts?.();
-    } catch {}
+    } catch { }
   };
 
   return (
-    <div className="bg-white border rounded-xl shadow-sm w-full max-w-2xl mx-auto mb-6 flex flex-col">
+    <div className="bg-white border rounded-xl shadow-sm w-full max-w-[95%] sm:max-w-[90%] md:max-w-[1200px] lg:max-w-[1400px] mx-auto mb-6 flex flex-col">
+
       {/* HEADER */}
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-3">
@@ -113,16 +109,19 @@ export default function PostCard({ post, setPosts, refreshPosts }) {
       </div>
 
       {/* POST IMAGE */}
+      {/* POST IMAGE */}
       {postImageURL && (
         <div className="w-full flex justify-center bg-black/5 mb-2">
           <img
             src={postImageURL}
             onError={(e) => (e.target.src = defaultProfile)}
-            className="w-full h-auto object-contain rounded"
+            className="w-full max-h-[500px] sm:max-h-[400px] md:max-h-[350px] lg:max-h-[300px] xl:max-h-[350px] object-cover rounded"
             alt="post"
           />
         </div>
       )}
+
+
 
       {/* POST CONTENT */}
       {post.content && (
@@ -134,15 +133,15 @@ export default function PostCard({ post, setPosts, refreshPosts }) {
       )}
 
       {/* ACTIONS */}
-      <div className="flex justify-between items-center px-4 py-2 border-t">
+      <div className="flex items-center gap-6 px-4 py-2 border-t">
         <button
           onClick={handleLike}
-          className={`font-semibold text-sm sm:text-base flex items-center gap-1 ${
-            liked ? "text-blue-600" : "text-gray-700"
-          }`}
+          className={`font-semibold text-sm sm:text-base flex items-center gap-1 ${liked ? "text-blue-600" : "text-gray-700"
+            }`}
         >
           👍 {liked ? "Liked" : "Like"} ({likesCount})
         </button>
+
         <button
           onClick={() => setShowComments((v) => !v)}
           className="font-semibold text-gray-700 text-sm sm:text-base flex items-center gap-1"
@@ -151,7 +150,7 @@ export default function PostCard({ post, setPosts, refreshPosts }) {
         </button>
       </div>
 
-      {/* COMMENTS SECTION */}
+      {/* COMMENTS */}
       {showComments && (
         <div className="px-4 py-2 border-t overflow-y-auto max-h-48">
           {comments.map((c) => (

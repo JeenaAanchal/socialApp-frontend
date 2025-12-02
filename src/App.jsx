@@ -7,13 +7,16 @@ import {
 import { useContext } from "react";
 import UserContext from "./context/UserContext";
 
+// Loading Context & Loader
+import { LoadingProvider, LoadingContext } from "./context/LoadingContext";
+import Loader from "./components/Loader";
 
 // Pages
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Messages from "./pages/Messages";
-import Settings from "./pages/Settings";
+import Settings from "./pages/Settings/Settings";
 import CreatePost from "./pages/CreatePost";
 import UserProfile from "./pages/UserProfile";
 import NotificationsPage from "./pages/NotificationsPage";
@@ -26,15 +29,15 @@ import TicketThread from "./pages/TicketThread";
 import AdminPage from "./admin/AdminPage";
 import AdminSupport from "./admin/AdminSupport";
 import TicketThreadAdmin from "./admin/TicketThreadAdmin";
-import TicketList from "./admin/TicketList"; // ✅ you must import this
+import TicketList from "./admin/TicketList";
 
-export default function App() {
+function AppRoutes() {
   const { currentUser } = useContext(UserContext);
 
   if (currentUser === undefined) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <p className="text-gray-500 text-lg">Loading...</p>
+        <p className="text-gray-500 text-lg">Loading user...</p>
       </div>
     );
   }
@@ -82,7 +85,6 @@ export default function App() {
           }
         />
         <Route path="/post/:postId" element={<PostPage />} />
-
         <Route path="/messages" element={<Messages />} />
 
         {/* User Support Pages */}
@@ -91,9 +93,9 @@ export default function App() {
 
         {/* Admin Routes */}
         <Route path="/admin" element={<AdminPage />}>
-          <Route index element={<TicketList />} />          {/* /admin */}
-          <Route path="support" element={<AdminSupport />} /> {/* /admin/support */}
-          <Route path="support/:ticketId" element={<TicketThreadAdmin />} /> {/* thread */}
+          <Route index element={<TicketList />} />
+          <Route path="support" element={<AdminSupport />} />
+          <Route path="support/:ticketId" element={<TicketThreadAdmin />} />
         </Route>
 
         {/* Fallback */}
@@ -103,5 +105,16 @@ export default function App() {
         />
       </Routes>
     </Router>
+  );
+}
+
+export default function App() {
+  return (
+    <LoadingProvider>
+      <AppRoutes />
+      <LoadingContext.Consumer>
+        {({ loading }) => loading && <Loader />}
+      </LoadingContext.Consumer>
+    </LoadingProvider>
   );
 }

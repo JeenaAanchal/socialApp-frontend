@@ -8,10 +8,11 @@ import crossIcon from "../assets/cross-icon.png";
 // Backend URL
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-const fixURL = (path) => {
-  if (!path) return "";
+// Fix URL function
+const fixURL = (path, fallback = defaultProfile) => {
+  if (!path) return fallback;
   if (path.startsWith("http")) return path;
-  return `${API_URL}/${path}`;
+  return `${API_URL}/${path.replace(/^\/?/, "")}`;
 };
 
 export default function UserListModal({ type, users, onClose }) {
@@ -49,11 +50,11 @@ export default function UserListModal({ type, users, onClose }) {
               onClick={() => handleUserClick(u._id)}
             >
               <img
-                src={u.profilePic ? fixURL(u.profilePic) : defaultProfile}
-                alt={u.username}
+                src={fixURL(u.profilePic, defaultProfile)}
+                alt={u.username || "User"}
                 className="w-8 h-8 rounded-full object-cover"
               />
-              <span>{u.username}</span>
+              <span>{u.username || "Unknown"}</span>
             </div>
           ))
         )}

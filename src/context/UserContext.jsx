@@ -4,11 +4,14 @@ const UserContext = createContext({
   currentUser: null,
   setCurrentUser: () => {},
   loading: true,
+  unreadNotifications: 0,
+  setUnreadNotifications: () => {},
 });
 
 export function UserProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
     try {
@@ -33,10 +36,18 @@ export function UserProvider({ children }) {
   }, [currentUser]);
 
   return (
-    <UserContext.Provider value={{ currentUser, setCurrentUser, loading }}>
+    <UserContext.Provider
+      value={{
+        currentUser,
+        setCurrentUser,
+        loading,
+        unreadNotifications,
+        setUnreadNotifications,
+      }}
+    >
       {children}
     </UserContext.Provider>
   );
 }
 
-export default UserContext; // <--- default export only
+export default UserContext;

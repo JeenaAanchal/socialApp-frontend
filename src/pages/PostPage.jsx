@@ -97,19 +97,25 @@ export default function PostPage() {
 
   return (
     <div className="w-full px-2 md:px-6 py-4 flex justify-center">
-      <div className="w-full max-w-[900px] flex flex-col gap-6">
+      {/* WIDTH UPDATED TO 1200PX */}
+      <div className="w-full max-w-[1200px] flex flex-col gap-6">
+
         {/* Post */}
         <div className="bg-white border rounded-xl shadow-sm p-4">
           <div className="flex items-center gap-3 mb-3">
             <img
-              src={fixProfilePic(post.author?.profilePic, currentUser.profilePic)}
+              src={fixProfilePic(post.author?.profilePic, DEFAULT_PROFILE)}
               alt={post.author?.username || "user"}
               className="w-12 h-12 rounded-full object-cover"
             />
-            <span className="font-semibold">{post.author?.username || "Unknown"}</span>
+            <span className="font-semibold">
+              {post.author?.username || "Unknown"}
+            </span>
           </div>
 
-          {post.content && <p className="mb-3 whitespace-pre-wrap">{post.content}</p>}
+          {post.content && (
+            <p className="mb-3 whitespace-pre-wrap">{post.content}</p>
+          )}
 
           {post.image && (
             <img
@@ -119,13 +125,17 @@ export default function PostPage() {
             />
           )}
 
-          <div className="flex gap-4">
+          {/* fixed spacing */}
+          <div className="flex items-center gap-8 mt-2">
             <button
               onClick={handleLike}
-              className={`font-semibold ${isLiked ? "text-blue-600" : "text-gray-700"}`}
+              className={`font-semibold ${
+                isLiked ? "text-blue-600" : "text-gray-700"
+              }`}
             >
               Like ({post.likes.length})
             </button>
+
             <button
               onClick={() => setShowComments((prev) => !prev)}
               className="font-semibold text-gray-700"
@@ -139,15 +149,18 @@ export default function PostPage() {
         {showComments && (
           <div className="bg-white border rounded-xl shadow-sm p-4">
             <h2 className="font-semibold mb-2">Comments</h2>
+
             {post.comments.map((c) => (
               <div key={c._id} className="mb-2 flex gap-2 items-start">
                 <img
-                  src={fixProfilePic(c.author?.profilePic, currentUser.profilePic)}
+                  src={fixProfilePic(c.author?.profilePic, DEFAULT_PROFILE)}
                   alt={c.author?.username || "user"}
                   className="w-10 h-10 rounded-full object-cover"
                 />
                 <div>
-                  <span className="font-semibold">{c.author?.username || "Unknown"}</span>{" "}
+                  <span className="font-semibold">
+                    {c.author?.username || "Unknown"}
+                  </span>{" "}
                   {c.text}
                 </div>
               </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState, useContext, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import PostCard from "../components/PostCard";
 import api from "../api/axios";
@@ -7,6 +7,12 @@ import UserListModal from "../components/UserListModal";
 import defaultProfile from "../assets/profile-pic-avatar.jpg";
 
 const DEFAULT_PROFILE = defaultProfile;
+
+const resolvePic = (pic) => {
+  if (!pic || typeof pic !== "string") return DEFAULT_PROFILE;
+  if (pic.startsWith("http")) return pic;
+  return `${import.meta.env.VITE_API_URL}/${pic}`;
+};
 
 export default function UserProfile() {
   const { currentUser, setCurrentUser } = useContext(UserContext);
@@ -20,60 +26,85 @@ export default function UserProfile() {
   const [modalData, setModalData] = useState({ type: "", users: [] });
   const [refreshFlag, setRefreshFlag] = useState(false);
 
-  const refreshPosts = () => setRefreshFlag((prev) => !prev);
+  const refreshPosts = () => setRefreshFlag((p) => !p);
+
+  const mergeAndSetUser = useCallback(
+    (newUser) => {
+      setCurrentUser((prev) => {
+        const prevToken = prev?.token;
+        const merged = { ...(prev || {}), ...(newUser || {}) };
+        if (prevToken && !merged.token) merged.token = prevToken;
+        try {
+          localStorage.setItem("currentUser", JSON.stringify(merged));
+        } catch (err) {
+          console.error("persist user error:", err);
+        }
+        return merged;
+      });
+    },
+    [setCurrentUser]
+  );
 
   useEffect(() => {
     if (!currentUser) return;
 
+    let mounted = true;
     const fetchProfileAndPosts = async () => {
       try {
-        const resUser = await api.get(`/users/${id}`, {
-          headers: { Authorization: `Bearer ${currentUser.token}` },
-        });
-        const profileUser = resUser.data.user;
-        setUser({ ...profileUser, profilePic: profileUser.profilePic || DEFAULT_PROFILE });
+        const resUser = await api.get(`/users/${id}`);
+        const profileUser = resUser?.data?.user;
+        if (!profileUser) throw new Error("Profile not found");
 
-        const resPosts = await api.get(`/posts/user/${id}`, {
-          headers: { Authorization: `Bearer ${currentUser.token}` },
-        });
-        setPosts(resPosts.data.posts || []);
+        const normalized = { ...profileUser, profilePic: profileUser.profilePic || DEFAULT_PROFILE };
+        if (mounted) setUser(normalized);
+
+        const resPosts = await api.get(`/posts/user/${id}`);
+        if (mounted) setPosts(resPosts.data.posts || []);
       } catch (err) {
-        console.error("Profile fetch failed:", err);
-        setUser({ username: "Unknown", profilePic: DEFAULT_PROFILE });
-        setPosts([]);
+        console.error("Profile fetch failed:", err?.response?.data || err.message);
+        if (mounted) {
+          setUser({ username: "Unknown", profilePic: DEFAULT_PROFILE });
+          setPosts([]);
+        }
       }
     };
 
     fetchProfileAndPosts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, currentUser, refreshFlag, loadingFollow, loadingBlock]);
 
   if (!user || !currentUser) return null;
 
-  const isOwnProfile = user._id === currentUser._id;
+  const isOwnProfile = String(user._id) === String(currentUser._id);
   const profileUser = isOwnProfile ? currentUser : user;
 
-  const isFollowing = user.followers?.some((f) => f._id === currentUser._id);
-  const isBlocked = currentUser.blockedUsers?.includes(user._id);
+  const isFollowing = Array.isArray(user.followers)
+    ? user.followers.some((f) => String(f._id || f) === String(currentUser._id))
+    : false;
 
-  const profilePicURL = profileUser.profilePic
-    ? `${profileUser.profilePic}?t=${Date.now()}`
-    : DEFAULT_PROFILE;
+  const isBlocked = Array.isArray(currentUser.blockedUsers)
+    ? currentUser.blockedUsers.some((b) => String(b) === String(user._id))
+    : false;
+
+  const profilePicURL = resolvePic(profileUser.profilePic);
 
   const handleFollowToggle = async () => {
     setLoadingFollow(true);
     try {
       const endpoint = isFollowing ? "unfollow" : "follow";
-      await api.post(`/users/${endpoint}/${user._id}`, {}, { headers: { Authorization: `Bearer ${currentUser.token}` } });
+      await api.post(`/users/${endpoint}/${user._id}`);
 
-      const resUser = await api.get(`/users/${user._id}`, { headers: { Authorization: `Bearer ${currentUser.token}` } });
-      setUser({ ...resUser.data.user, profilePic: resUser.data.user.profilePic || DEFAULT_PROFILE });
+      const [resUser, resCurrentUser] = await Promise.all([
+        api.get(`/users/${user._id}`),
+        api.get("/users/profile"),
+      ]);
 
-      const resCurrentUser = await api.get("/users/profile", { headers: { Authorization: `Bearer ${currentUser.token}` } });
-      setCurrentUser(resCurrentUser.data.user);
+      if (resUser?.data?.user) setUser({ ...resUser.data.user, profilePic: resUser.data.user.profilePic || DEFAULT_PROFILE });
+      if (resCurrentUser?.data?.user) mergeAndSetUser(resCurrentUser.data.user);
 
       refreshPosts();
     } catch (err) {
-      console.error("Follow/unfollow failed:", err);
+      console.error("Follow/unfollow failed:", err?.response?.data || err.message);
     } finally {
       setLoadingFollow(false);
     }
@@ -83,14 +114,14 @@ export default function UserProfile() {
     setLoadingBlock(true);
     try {
       const endpoint = isBlocked ? "unblock" : "block";
-      await api.post(`/users/${endpoint}/${user._id}`, {}, { headers: { Authorization: `Bearer ${currentUser.token}` } });
+      await api.post(`/users/${endpoint}/${user._id}`);
 
-      const resCurrentUser = await api.get("/users/profile", { headers: { Authorization: `Bearer ${currentUser.token}` } });
-      setCurrentUser(resCurrentUser.data.user);
+      const resCurrentUser = await api.get("/users/profile");
+      if (resCurrentUser?.data?.user) mergeAndSetUser(resCurrentUser.data.user);
 
-      if (!isBlocked) setPosts([]);
+      if (!isBlocked) setPosts([]); // hide posts if just blocked
     } catch (err) {
-      console.error("Block/unblock failed:", err);
+      console.error("Block/unblock failed:", err?.response?.data || err.message);
     } finally {
       setLoadingBlock(false);
     }
@@ -98,11 +129,11 @@ export default function UserProfile() {
 
   const openList = async (type) => {
     try {
-      const res = await api.get(`/users/${user._id}/${type}`, { headers: { Authorization: `Bearer ${currentUser.token}` } });
+      const res = await api.get(`/users/${user._id}/${type}`);
       setModalData({ type, users: res.data[type] || [] });
       setShowModal(true);
     } catch (err) {
-      console.error("Failed to fetch list:", err);
+      console.error("Failed to fetch list:", err?.response?.data || err.message);
     }
   };
 
@@ -111,7 +142,7 @@ export default function UserProfile() {
       <div className="flex items-center gap-6 mb-10">
         <img
           src={profilePicURL}
-          onError={(e) => (e.target.src = DEFAULT_PROFILE)}
+          onError={(e) => { e.target.onerror = null; e.target.src = DEFAULT_PROFILE; }}
           className="w-24 h-24 rounded-full object-cover border"
           alt="profile"
         />
